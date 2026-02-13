@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -287,14 +288,28 @@ function fmtActual(amount, method) {
   if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
   return s;
 }
-function determinePage(c, a) {
-  const t = (c + ' ' + a).toLowerCase();
-  if (/lj_t_|lj_h_|lj_ig|lj fb/.test(t)) return /(_ig|lj ig)/.test(t) ? 'LJ IG' : 'LJ FB';
-  if (t.includes('profile_visit_lj')) return 'LJ IG';
-  if (t.includes('profile_visit_be')) return 'BE';
-  if (/education|_edu/.test(t)) return 'Edu';
-  return 'Health';
+
+/**
+ * Page 分類規則（按優先順序）:
+ *   1. profile_visit → "LJ IG"
+ *   2. lj           → "LJ FB"
+ *   3. edu          → "EDU"
+ *   4. health       → "Health"
+ *   5. event        → "Event"
+ *   6. subscription → "Subscription"
+ *   7. 以上都不匹配  → ""
+ */
+function determinePage(campaignName) {
+  const t = campaignName.toLowerCase();
+  if (t.includes('profile_visit')) return 'LJ IG';
+  if (t.includes('lj')) return 'LJ FB';
+  if (t.includes('edu')) return 'EDU';
+  if (t.includes('health')) return 'Health';
+  if (t.includes('event')) return 'Event';
+  if (t.includes('subscription')) return 'Subscription';
+  return '';
 }
+
 function toCSV(rows) {
   return rows.map(r => r.map(c => {
     const s = String(c);
@@ -333,26 +348,21 @@ async function runConvert() {
 
   invoices.sort((a, b) => parseInvDate(a.invoiceDate) - parseInvDate(b.invoiceDate));
 
-  /* === Overview CSV ===
-     Column A: Form submit date (留空)
-     Column B-H: Invoice Date, Transaction ID, Payment method, Card owner, Invoice Amount, Currency, Actual Payment */
+  /* Overview CSV */
   const oRows = [['Form submit date','Invoice Date','Transaction ID','Payment method','Who is the card owner?','Invoice Amount','Currency','Actual Payment']];
   for (const inv of invoices) {
     const dt = parseInvDate(inv.invoiceDate);
     oRows.push(['', fmtDate(dt), inv.transactionId || '', inv.paymentMethod || '', cardOwner, fmtNum(inv.invoiceAmount), inv.currency, fmtActual(inv.invoiceAmount, inv.paymentMethod)]);
   }
 
-  /* === Detail CSV ===
-     Column A: Form submit date (留空)
-     Column B: Invoice date
-     Column C-E: Campaign Name, Page, Campaign Amount */
+  /* Detail CSV */
   let detailCount = 0;
   const dRows = [['Form submit date','Invoice date','Campaign Name','Page','Campaign Amount']];
   for (const inv of invoices) {
     const dt = parseInvDate(inv.invoiceDate);
     const ds = fmtDate(dt);
     for (const c of inv.campaigns) {
-      dRows.push(['', ds, c.campaignName, determinePage(c.campaignName, c.adSetName), 'HK$' + fmtNum(c.amount)]);
+      dRows.push(['', ds, c.campaignName, determinePage(c.campaignName), 'HK$' + fmtNum(c.amount)]);
       detailCount++;
     }
   }
