@@ -323,7 +323,7 @@ async function runConvert() {
   convertBtn.classList.add('processing');
   resultsArea.innerHTML = '';
 
-  const cardOwner = document.getElementById('cardOwner').value || 'Arthur Chun';
+  const cardOwner = document.getElementById('cardOwner').value || 'Your Name';
   const logLines = [];
   const log = (msg, cls = '') => logLines.push({ msg, cls });
   const invoices = [];
